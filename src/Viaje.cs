@@ -22,6 +22,38 @@ namespace WitchHuntCoop
         static string mensaje; static float mensajeHasta;
         static float ultimoRecibido = -100f;
         static bool siguiendo;   // este viaje lo inició el compañero: no se revisa ni se reenvía
+        /// (2026-11-20) Hora (realtime) de la última muerte de un jefe en este juego (la anota Combate).
+        public static float MuerteJefe = -1000f;
+
+        /// (2026-11-20, pedido) TRAMO FINAL: desde que muere el gusano gigante (o, al cargar la partida, desde el día 4: el juego ya no
+        /// manda al bosque y en el pueblo corre la cinemática final y los créditos) no se exige estar a menos de 15 m para viajar: nada
+        /// debe interrumpir el final. Los viajes SIGUEN siendo de los dos (quien viaja avisa y el compañero viaja con él); solo se quita
+        /// la distancia. Se reinicia al volver al menú (una partida nueva vuelve a exigirla).
+        public static float GusanoMuerto = -1f;
+        static bool finalAvisado;
+        public static bool TramoFinal
+        {
+            get
+            {
+                if (plugin == null) return false;
+                if (plugin.Escena == 3) { GusanoMuerto = -1f; finalAvisado = false; return false; }   // menú
+                if (GusanoMuerto > 0f) return true;
+                var dia = FsmVariables.GlobalVariables.FindFsmInt("Witch_day");
+                return dia != null && dia.Value >= 4;
+            }
+        }
+
+        /// ¿Este viaje al pueblo es el que lanza el juego al morir un jefe? No siempre lo lanza la FSM "Boss_killed": tras el gusano
+        /// (hijo del diablo) lo lanzó otra (RunFSM) y el viaje quedaba BLOQUEADO por distancia con la pantalla en negro para siempre.
+        static bool PorMuerteDeJefe(RunFSM r, string destino)
+        {
+            if (EsCaceria(destino)) return false;
+            if (r.Owner != null && r.Owner.name == "Boss_killed") return true;
+            if (plugin.Escena != Mundo.EscenaBosque) return false;
+            if (Time.realtimeSinceStartup - MuerteJefe < 120f) return true;
+            var cq = FsmVariables.GlobalVariables.FindFsmInt("CurrentQuest");   // al morir un jefe el juego pone la misión 11 ("explora el pueblo")
+            return cq != null && cq.Value == 11;
+        }
 
         static bool Prefix(RunFSM __instance)
         {
@@ -32,10 +64,10 @@ namespace WitchHuntCoop
                 if (plugin == null || !plugin.Conectado) return true;   // jugando solo: como siempre
                 if (siguiendo) return true;
                 // Al morir un jefe el juego manda de vuelta al pueblo (parte de la historia): se permite siempre, pero viajan LOS DOS (2026-11-18)
-                if (!EsCaceria(destino) && __instance.Owner != null && __instance.Owner.name == "Boss_killed")
+                if (PorMuerteDeJefe(__instance, destino))
                 {
                     plugin.EnviarViaje(DestinoVolverPueblo); ultimoEnviado = Time.realtimeSinceStartup; permisoCarga = Time.realtimeSinceStartup + 20f;
-                    plugin.Log("Viaje a '" + destino + "' por la muerte de un jefe: viajan los dos.");
+                    plugin.Log("Viaje a '" + destino + "' por la muerte de un jefe (lo lanzó " + (__instance.Owner != null ? __instance.Owner.name : "?") + "): viajan los dos.");
                     return true;
                 }
                 if (!EsCaceria(destino) && SoloQuedoYo())
@@ -54,7 +86,7 @@ namespace WitchHuntCoop
                     if (!JuntosParaViajar(out porqueP))
                     {
                         Avisar("deben estar cerca para volver al pueblo");
-                        plugin.Log("Viaje a '" + destino + "' bloqueado (en RunFSM): " + porqueP);
+                        plugin.Log("Viaje a '" + destino + "' bloqueado (en RunFSM de " + (__instance.Owner != null ? __instance.Owner.name : "?") + "): " + porqueP);
                         __instance.Finish();
                         try { __instance.Fsm.SetState("State 1"); } catch { }
                         return false;
@@ -325,6 +357,11 @@ namespace WitchHuntCoop
         static bool JuntosParaViajar(out string porque)
         {
             if (SoloQuedoYo()) { porque = ""; return true; }
+            if (TramoFinal)
+            {
+                if (!finalAvisado) { finalAvisado = true; plugin.Log("Viaje: tramo final de la historia: ya no se exige estar a menos de " + (int)Distancia + " m (los viajes siguen siendo de los dos)."); }
+                porque = ""; return true;
+            }
             var c = plugin.CompaneroActual;
             var j = plugin.Jugador;
             if (c == null || c.Escena != plugin.Escena || !c.Visible || j == null)

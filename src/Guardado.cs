@@ -50,6 +50,42 @@ namespace WitchHuntCoop
             catch { return null; }
         }
 
+        // ---------------- Partida terminada (2026-11-20, pedido: "marcarla como terminada sin borrarla") ----------------
+        const string Marca = "coop_terminada.txt";
+
+        /// Al terminar los créditos de una partida cooperativa: copia la partida a coop_respaldos/terminada_<fecha>.sav y deja una
+        /// marca. La partida NO se borra (Continuar sigue cargándola; el menú avisa que ya terminó).
+        public static string ArchivarTerminada()
+        {
+            try
+            {
+                string dir = Application.persistentDataPath, f = Path.Combine(dir, Coop);
+                if (!File.Exists(f)) return null;
+                string fecha = System.DateTime.Now.ToString("yyyy-MM-dd_HHmmss");
+                string destino = Path.Combine(Path.Combine(dir, "coop_respaldos"), "terminada_" + fecha + ".sav");
+                Directory.CreateDirectory(Path.GetDirectoryName(destino));
+                File.Copy(f, destino, true);
+                File.WriteAllText(Path.Combine(dir, Marca), System.DateTime.Now.ToString("yyyy-MM-dd HH:mm") + "|" + new FileInfo(f).Length + "|" + File.GetLastWriteTimeUtc(f).Ticks + "|" + destino);
+                return destino;
+            }
+            catch { return null; }
+        }
+
+        /// Fecha en que terminó la partida cooperativa guardada, o null si no está terminada (o se volvió a jugar y guardar después).
+        public static string Terminada()
+        {
+            try
+            {
+                string dir = Application.persistentDataPath, f = Path.Combine(dir, Coop), m = Path.Combine(dir, Marca);
+                if (!File.Exists(f) || !File.Exists(m)) return null;
+                var p = File.ReadAllText(m).Split('|');
+                if (p.Length < 3) return null;
+                long ticks; if (!long.TryParse(p[2], out ticks)) return null;
+                return File.GetLastWriteTimeUtc(f).Ticks <= ticks ? p[0] : null;   // guardada otra vez después del final: ya no cuenta como terminada
+            }
+            catch { return null; }
+        }
+
         /// Partida nueva DE VERDAD (2026-11-18): el menú carga la partida anterior en memoria (variables de Lua) al abrirse y el
         /// botón "Nueva partida" del juego no las borra todas: la partida nueva heredaba la historia (lobo muerto, CurrentQuest 33,
         /// bruja jefa activa). Se devuelven todas las variables a sus valores iniciales y se vuelve a poner la dificultad elegida.

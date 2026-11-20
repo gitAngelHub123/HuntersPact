@@ -161,6 +161,21 @@ namespace WitchHuntCoop
             }
             if (coop != Entrada.PausaCoop) plugin.Log("Pausa: " + (coop ? "menú abierto sin detener el juego (cooperativo)" : "menú cerrado"));
             Entrada.PausaCoop = coop;
+            MusicaSinPausa(coop);
+        }
+
+        /// (2026-11-20) El menú de pausa del juego ALTERNA el silencio de la música (MuteMusic sin valor fijo): al abrir (estado 'original')
+        /// la silencia y al continuar (estado 'State 3') la reactiva. En cooperativo el otro jugador puede viajar mientras este tiene la
+        /// pausa abierta: el viaje cierra el menú sin pasar por 'continuar' y la música quedaba silenciada para siempre (se notó en el
+        /// pueblo tras volver del bosque). Ahora: con la pausa cerrada la música nunca queda silenciada, y en cooperativo tampoco con la
+        /// pausa abierta (el mundo sigue). Jugando solo, con la pausa abierta, se deja como hace el juego.
+        void MusicaSinPausa(bool pausaCoop)
+        {
+            var sm = RegistroMusica.Existente();   // nunca SoundManager.Instance: crearía uno vacío y el juego se quedaría sin música
+            if (sm == null || !sm.mutedMusic) return;
+            if (PausaAbierta && !pausaCoop) return;
+            SoundManager.MuteMusic(false);
+            plugin.Log("Música: reactivada (" + (pausaCoop ? "pausa en cooperativo: el juego sigue" : "había quedado silenciada sin la pausa abierta") + ")");
         }
 
         // ---------------- Esc al cancelar una tecla ----------------

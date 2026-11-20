@@ -272,6 +272,7 @@ namespace WitchHuntCoop
             }
         }
         bool eligiendoDificultad, permaElegido, fuegoAmigoElegido; int dificultadSel;
+        string terminada; float proxTerminada;
 
         void DibujarEleccion()
         {
@@ -298,6 +299,9 @@ namespace WitchHuntCoop
                 GUI.enabled = hay;
                 if (GUILayout.Button("Continuar", sGrande, GUILayout.Height(64))) Elegir(0);
                 GUI.enabled = true;
+                // (2026-11-20) partida que ya llegó al final del juego: se avisa (no se borra; hay copia en coop_respaldos)
+                if (Time.realtimeSinceStartup > proxTerminada) { proxTerminada = Time.realtimeSinceStartup + 2f; terminada = hay ? Guardado.Terminada() : null; }
+                if (terminada != null) GUILayout.Label("Esta partida ya terminó (fin del juego el " + terminada + "). Hay una copia en coop_respaldos.", sEtiqueta);
                 GUILayout.Space(14);
                 if (!eligiendoDificultad)
                 {

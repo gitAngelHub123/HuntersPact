@@ -11,7 +11,23 @@ namespace WitchHuntCoop
     public static class SonidosCompanero
     {
         const byte Disparo = 0, Recarga = 1, CambioArma = 2;
-        static WeaponBehavior armaVista; static int indiceVisto = -1, balasVistas = -1; static bool recargaVista;
+        static WeaponBehavior armaVista; static int indiceVisto = -1, balasVistas = -1; static float recargaVista = -1f, golpeVisto = -1f;
+        /// Armas cuerpo a cuerpo (estoque, sin arma): no gastan munición, el golpe se ve en shootStartTime (2026-11-20).
+        static bool CuerpoACuerpo(WeaponBehavior wb) { return wb != null && wb.range < 5f; }
+
+        /// (2026-11-20) Hora en que empezó la última recarga del arma. El juego declara WeaponBehavior.reloadState pero NUNCA lo cambia
+        /// (por eso la recarga del compañero no sonaba nunca); Reload() sí guarda la hora en el campo privado reloadStartTime.
+        static readonly System.Reflection.FieldInfo campoInicioRecarga = HarmonyLib.AccessTools.Field(typeof(WeaponBehavior), "reloadStartTime");
+        public static float InicioRecarga(WeaponBehavior wb)
+        {
+            try { return wb != null && campoInicioRecarga != null ? (float)campoInicioRecarga.GetValue(wb) : -1f; } catch { return -1f; }
+        }
+        /// ¿Está recargando ahora? (para bajar el arma del muñeco del compañero)
+        public static bool Recargando(WeaponBehavior wb)
+        {
+            float t = InicioRecarga(wb);
+            return wb != null && t > 0f && Time.time - t < Mathf.Max(0.5f, wb.reloadTime);
+        }
         static AudioSource voz, pies; static float proxPaso; static int pasoN;
         // contadores para comprobar que de verdad suena (orden "sonidoscomp")
         static int enviados, recibidos, sonaron, silenciados, sinClip, pasosN;
@@ -42,13 +58,15 @@ namespace WitchHuntCoop
             if (i != indiceVisto)
             {
                 if (indiceVisto >= 0) Mandar(plugin, CambioArma, i);
-                indiceVisto = i; armaVista = wb; balasVistas = wb.bulletsLeft; recargaVista = wb.reloadState;
+                indiceVisto = i; armaVista = wb; balasVistas = wb.bulletsLeft; recargaVista = InicioRecarga(wb); golpeVisto = wb.shootStartTime;
                 return;
             }
-            if (wb != armaVista) { armaVista = wb; balasVistas = wb.bulletsLeft; recargaVista = wb.reloadState; return; }
+            if (wb != armaVista) { armaVista = wb; balasVistas = wb.bulletsLeft; recargaVista = InicioRecarga(wb); golpeVisto = wb.shootStartTime; return; }
+            if (CuerpoACuerpo(wb) && wb.shootStartTime != golpeVisto) { golpeVisto = wb.shootStartTime; if (wb.shootStartTime > 0f) Mandar(plugin, Disparo, i); }
             if (wb.bulletsLeft < balasVistas && wb.bulletsPerClip > 0) Mandar(plugin, Disparo, i);
-            if (wb.reloadState && !recargaVista) Mandar(plugin, Recarga, i);
-            balasVistas = wb.bulletsLeft; recargaVista = wb.reloadState;
+            float inicio = InicioRecarga(wb);
+            if (inicio > 0f && inicio != recargaVista) Mandar(plugin, Recarga, i);   // empezó una recarga nueva
+            balasVistas = wb.bulletsLeft; recargaVista = inicio;
         }
 
         static void Mandar(Plugin plugin, byte tipo, int arma)
@@ -72,10 +90,13 @@ namespace WitchHuntCoop
             {
                 clip = wb != null ? wb.fireSnd : null;
                 if (pw.weaponOrder[arma].name == Escopeta.Nombre) clip = Sonidos.Clip("esc_disparo") ?? clip;
-                vol = 1f; min = 10f; max = 260f;   // un disparo se oye lejos
+                if (CuerpoACuerpo(wb)) { vol = 0.8f; min = 2f; max = 30f; }   // golpe del estoque: se oye de cerca
+                else { vol = 1f; min = 10f; max = 260f; }   // un disparo se oye lejos
             }
             else if (tipo == Recarga)
             {
+                var pasos = SecuenciaRecarga.De(pw.weaponOrder[arma].name);   // escopeta y ballesta: su recarga propia (el reloadLastSnd del juego es "silence")
+                if (pasos != null) { plugin.StartCoroutine(Secuencia(plugin, c.Cuerpo.transform, pasos, "recarga " + pw.weaponOrder[arma].name)); return; }
                 clip = wb != null ? (wb.reloadSnd ?? wb.reloadLastSnd) : null;
                 if (clip == null && pw.weaponOrder[arma].name == Escopeta.Nombre) clip = Sonidos.Clip("esc_meter1");
                 vol = 0.8f; min = 2f; max = 30f;
@@ -93,6 +114,24 @@ namespace WitchHuntCoop
             v.minDistance = min; v.maxDistance = max; v.clip = clip; v.volume = vol * Opciones.FactorVolumen; v.Play();
             Object.Destroy(g, clip.length + 0.3f);
             plugin.StartCoroutine(Comprobar(v, (tipo == Disparo ? "disparo " : tipo == Recarga ? "recarga " : "cambio ") + clip.name));
+        }
+
+        /// Recarga por pasos en 3D sobre el compañero (escopeta, ballesta). Comprueba el primer paso como los demás sonidos.
+        static System.Collections.IEnumerator Secuencia(Plugin plugin, Transform cuerpo, SecuenciaRecarga.Paso[] pasos, string que)
+        {
+            float t0 = Time.time;
+            for (int i = 0; i < pasos.Length; i++)
+            {
+                while (Time.time - t0 < pasos[i].T) { if (cuerpo == null) yield break; yield return null; }
+                if (cuerpo == null) yield break;
+                var clip = pasos[i].Clip(); if (clip == null) { if (i == 0) sinClip++; continue; }
+                var g = new GameObject("coop_companero_sonido"); g.transform.SetParent(cuerpo, false); g.transform.localPosition = Vector3.up * 1.4f;
+                var v = g.AddComponent<AudioSource>();
+                v.playOnAwake = false; v.spatialBlend = 1f; v.rolloffMode = AudioRolloffMode.Logarithmic; v.dopplerLevel = 0f; v.priority = 64;
+                v.minDistance = 2f; v.maxDistance = 30f; v.clip = clip; v.volume = 0.9f * pasos[i].Vol * Opciones.FactorVolumen; v.Play();
+                Object.Destroy(g, clip.length + 0.3f);
+                if (i == 0) plugin.StartCoroutine(Comprobar(v, que + " (" + pasos.Length + " pasos, " + clip.name + ")"));
+            }
         }
 
         static System.Collections.IEnumerator Comprobar(AudioSource v, string que)

@@ -108,6 +108,27 @@ namespace WitchHuntCoop
         Animation an; Transform brazo, mano, medio;
         readonly List<Transform> dedos = new List<Transform>(); readonly List<Quaternion> baseDedos = new List<Quaternion>();
         bool curvados;
+        // (2026-11-20) sonidos de la recarga (antes era muda): SecuenciaRecarga.Ballesta, según el avance del clip "Reload"
+        AudioSource fuente; bool recargaAntes; bool[] sonados;
+
+        void SonidosRecarga()
+        {
+            var st = an["Reload"];
+            bool ahora = st != null && an.IsPlaying("Reload");
+            if (ahora && !recargaAntes) sonados = new bool[SecuenciaRecarga.Ballesta.Length];
+            recargaAntes = ahora;
+            if (!ahora || sonados == null) return;
+            if (fuente == null) { fuente = gameObject.AddComponent<AudioSource>(); fuente.spatialBlend = 0f; fuente.playOnAwake = false; fuente.priority = 32; }
+            float t = st.time;
+            for (int i = 0; i < sonados.Length; i++)
+            {
+                var paso = SecuenciaRecarga.Ballesta[i];
+                if (sonados[i] || t < paso.T) continue;
+                sonados[i] = true;
+                var c = paso.Clip(); if (c != null) fuente.PlayOneShot(c, Mathf.Clamp01(paso.Vol * Opciones.FactorVolumen));
+                Ballesta.Registro("Recarga de la ballesta: paso " + (i + 1) + "/" + sonados.Length + " " + (c != null ? c.name : "SIN CLIP") + " a " + t.ToString("0.00") + " s");
+            }
+        }
 
         public void Iniciar(Animation a, Transform brazoIzq, Transform manoIzq)
         {
@@ -141,6 +162,7 @@ namespace WitchHuntCoop
         void LateUpdate()
         {
             if (an == null) return;
+            SonidosRecarga();
             if (AnimBallesta.PunoManual >= 0f)
             {
                 if (!curvados) { baseDedos.Clear(); foreach (var f in dedos) baseDedos.Add(f.localRotation); curvados = true; }

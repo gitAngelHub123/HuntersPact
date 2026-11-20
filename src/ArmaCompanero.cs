@@ -28,7 +28,7 @@ namespace WitchHuntCoop
             byte banderas = 0;
             var j = plugin.Jugador;
             if (j != null && j.zoomed) banderas |= Apuntando;
-            if (wb != null && wb.reloadState) banderas |= Recargando;
+            if (wb != null && SonidosCompanero.Recargando(wb)) banderas |= Recargando;   // (reloadState del juego nunca cambia)
             if (wb != null && wb.sprintState) banderas |= Corriendo;
             bool tiro = false;
             if (wb != null)

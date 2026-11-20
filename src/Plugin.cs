@@ -13,7 +13,7 @@ namespace WitchHuntCoop
     {
         public const string Guid = "angel.witchhunt.coop";
         public const string Nombre = "Hunters' Pact";   // (2026-11-20) nombre público del mod (GUID y DLL se mantienen para no duplicar instalaciones)
-        public const string Version = "0.2.0";
+        public const string Version = "0.2.1";
 
         const float IntervaloEstado = 0.05f;   // 20 envíos por segundo
         const float IntervaloHola = 1f;
@@ -62,7 +62,7 @@ namespace WitchHuntCoop
         Companero companero;
 
         Depuracion depuracion;
-        Combate combate;
+        internal Combate combate;
         public Combate CombateActual { get { return combate; } }
         Oro oro;
         Muerte muerte;
@@ -242,6 +242,7 @@ namespace WitchHuntCoop
             if (Controles.Capturando == null && Controles.Pulsada("panel")) AlternarPanel();   // F8 (panel de conexión) solo en pruebas (2026-11-20)
 #endif
             Viaje.Actualizar();
+            FinalCoop.Actualizar(this);   // (2026-11-20) créditos en cooperativo → partida marcada como terminada
 
             // Esto corre SIEMPRE, también con la red apagada (jugando solo): el modo de guardado,
             // la dificultad (se apaga sin compañero), la muerte y la restauración del terreno.

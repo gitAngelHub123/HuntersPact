@@ -19,6 +19,34 @@ namespace WitchHuntCoop
         public static float VidaNormales = 1f;
 
         const string EventoJefe = "Show_Boss_Healthbar";
+        /// (2026-11-20) Eventos con los que el juego avanza la historia al morir una criatura (FSM !!!scene_settings/Boss_killed).
+        /// El árbol de sacrificio y Elongata no muestran barra de vida pero envían "Tree1_killed": no se reconocían como jefes, y la
+        /// población del mod llegó a GENERAR Elongata de relleno (al matarla, el juego contaba un árbol destruido).
+        static readonly string[] EventosHistoria = { EventoJefe, "Tree1_killed", "Witch_killed", "Worm_killed", "Werewolf_killed", "LoadFinal" };
+
+        /// ¿Alguna máquina de estados de este objeto (o sus hijos) envía un evento de la historia?
+        public static bool EsDeHistoria(Transform raiz)
+        {
+            if (raiz == null) return false;
+            foreach (var f in raiz.GetComponentsInChildren<PlayMakerFSM>(true))
+            {
+                HutongGames.PlayMaker.FsmState[] estados = null;
+                try { estados = f != null ? f.FsmStates : null; } catch { }
+                if (estados == null) continue;
+                foreach (var st in estados)
+                {
+                    if (st == null || st.Actions == null) continue;
+                    foreach (var a in st.Actions)
+                    {
+                        if (a == null || a.GetType().Name != "SendEventByName") continue;
+                        var campo = a.GetType().GetField("sendEvent");
+                        var v = campo != null ? campo.GetValue(a) as HutongGames.PlayMaker.FsmString : null;
+                        if (v != null && System.Array.IndexOf(EventosHistoria, v.Value) >= 0) return true;
+                    }
+                }
+            }
+            return false;
+        }
         static readonly Dictionary<int, bool> esJefe = new Dictionary<int, bool>();
 
         static void Prefix(TakeDamage __instance, ref float damage)
@@ -49,23 +77,7 @@ namespace WitchHuntCoop
             Transform u = td.transform;
             while (u.parent != null && u.GetComponent<UnityEngine.AI.NavMeshAgent>() == null) u = u.parent;
             Transform raiz = u.parent != null ? u.parent : u;
-            foreach (var f in raiz.GetComponentsInChildren<PlayMakerFSM>(true))
-            {
-                if (f == null || f.Fsm == null || f.FsmStates == null) continue;
-                foreach (var st in f.FsmStates)
-                {
-                    if (st.Actions == null) continue;
-                    foreach (var a in st.Actions)
-                    {
-                        if (a == null || a.GetType().Name != "SendEventByName") continue;
-                        var campo = a.GetType().GetField("sendEvent");
-                        var v = campo != null ? campo.GetValue(a) as HutongGames.PlayMaker.FsmString : null;
-                        if (v != null && v.Value == EventoJefe) { r = true; break; }
-                    }
-                    if (r) break;
-                }
-                if (r) break;
-            }
+            r = EsDeHistoria(raiz);   // barra de vida de jefe o muerte que avanza la historia (árbol, bruja, gusano…)
             esJefe[id] = r;
             if (r) Debug.Log("[WitchHuntCoop] jefe detectado: " + raiz.name + " (vida ×" + VidaJefes + " en coop)");
             return r;

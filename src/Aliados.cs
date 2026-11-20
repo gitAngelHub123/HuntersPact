@@ -339,6 +339,7 @@ namespace WitchHuntCoop
             a.Slot = slot; a.Fin = Time.time + Duracion;
             mios.Add(a);
             Destello(donde + Vector3.up, new Color(0.6f, 0.2f, 1f));
+            SonidoInvocacion(donde);
             Viaje.Avisar("Invocaste un aliado (" + almas.Count + " almas en la bola).");
             plugin.Log("Bola: aliado " + tipo + " invocado en " + (donde - Anclaje.Origen()).ToString("F0"));
         }
@@ -577,6 +578,7 @@ namespace WitchHuntCoop
                 if (pl == null) return;
                 a = Crear(pl, tipo, p, Quaternion.Euler(0f, yaw, 0f), false);
                 a.Slot = slot; remotos[slot] = a;
+                SonidoInvocacion(p);   // el compañero también oye la invocación
                 int sl = slot;
                 if (a.Cuerpo != null) a.Cuerpo.Remoto = d => plugin.EnviarAliadoDano(Red.Armar(w => { w.Write((byte)sl); w.Write(d); }));
                 plugin.Log("Bola: aliado de " + plugin.NombreCompanero + " (" + tipo + ")");
@@ -729,6 +731,18 @@ namespace WitchHuntCoop
             foreach (var a in mios) sb.Append(" | ").Append(a.Tipo).Append(" en ").Append(a.Go != null ? (a.Go.transform.position - Anclaje.Origen()).ToString("F0") : "—").Append(" vida=").Append(a.Vida.ToString("0")).Append("/").Append(a.VidaMax.ToString("0")).Append(" daño=").Append(a.Dano.ToString("0")).Append(" presa=").Append(a.Presa != null ? a.Presa.name : "—").Append(" anim=").Append(a.Clips != null ? string.Join(",", System.Array.ConvertAll(a.Clips, c => c != null ? c.name : "-")) : "—").Append(" actual=").Append(a.ClipActual != null ? a.ClipActual.name : "—");
             sb.Append(" remotos=").Append(remotos.Count).Append(" variables de enemigos apuntando a aliados=").Append(originales.Count);
             return sb.ToString();
+        }
+
+        /// (2026-11-20) La invocación era muda: voz demoníaca del juego, en 3D donde aparece el aliado.
+        public static void SonidoInvocacion(Vector3 donde)
+        {
+            var c = SecuenciaRecarga.DelJuego("Black Magic - Demonic Voice Hit") ?? SecuenciaRecarga.DelJuego("MagicStoneV2") ?? Sonidos2.Tintineo;   // respaldos si el clip no está cargado
+            if (c == null) return;
+            var g = new GameObject("coop_invocacion_sonido"); g.transform.position = donde + Vector3.up;
+            var a = g.AddComponent<AudioSource>();
+            a.spatialBlend = 1f; a.rolloffMode = AudioRolloffMode.Logarithmic; a.minDistance = 3f; a.maxDistance = 45f; a.dopplerLevel = 0f; a.priority = 64;
+            a.clip = c; a.volume = 0.6f * Opciones.FactorVolumen; a.Play();
+            Object.Destroy(g, c.length + 0.3f);
         }
 
         public void OrdenInvocar() { if (plugin.Jugador != null) Invocar(plugin.Jugador); }

@@ -202,7 +202,12 @@ namespace WitchHuntCoop
     {
         const int Fs = 44100;
         static System.Random r = new System.Random(5);
-        static AudioClip seguro, tintineo, meter, cierre;
+        static AudioClip seguro, tintineo, meter, cierre, cuerda;
+        /// (2026-11-20) Cuerda de la ballesta tensándose: fricción de fibras que pulsa y un tono grave que sube (respaldo si el juego
+        /// no tiene cargados sus clips "rope_slow").
+        public static AudioClip Cuerda { get { return cuerda ?? (cuerda = Hacer("coop_bal_cuerda", 0.55f, t => {
+            float env = Mathf.Sin(Mathf.PI * t / 0.55f);
+            return Ruido() * 0.32f * env * (0.55f + 0.45f * Sen(26f + 22f * t, t)) + Sen(95f + 70f * t, t) * 0.22f * env; })); } }
         public static AudioClip Seguro { get { return seguro ?? (seguro = Hacer("coop_esc_seguro", 0.18f, t => Ruido() * Exp(t, 90) * 0.5f + Sen(1800, t) * Exp(t, 70) * 0.4f + Sen(140, t) * Exp(t, 40) * 0.5f)); } }
         public static AudioClip Tintineo { get { return tintineo ?? (tintineo = Hacer("coop_esc_tintineo", 0.45f, t => Sen(3300, t) * Exp(t, 14) * 0.35f + Sen(5100, t) * Exp(t, 18) * 0.2f + Sen(2400, t) * Exp(t, 10) * 0.2f)); } }
         public static AudioClip Meter { get { return meter ?? (meter = Hacer("coop_esc_meter", 0.14f, t => Sen(900, t) * Exp(t, 60) * 0.4f + Ruido() * Exp(t, 120) * 0.25f + Sen(380, t) * Exp(t, 50) * 0.3f)); } }

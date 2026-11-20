@@ -37,6 +37,10 @@ namespace WitchHuntCoop
             public bool MuerteAnotada;  // ya está en la lista de reapariciones (Pesadilla)
 
             public bool MuerteAvisada;   // invitado: ya avisó al anfitrión de que su copia murió
+            public bool VistoVivo;       // invitado: su copia tuvo vida > 0 alguna vez (los jefes tienen Health 0 hasta que empieza su pelea, 2026-11-20)
+            public bool JefeMuertoVisto; bool jefeVivo;
+            /// Jefe que estuvo vivo y ahora está muerto (para Viaje.MuerteJefe).
+            public bool VistoVivoJefe(bool esJefe, bool muerto) { if (!esJefe) return false; if (!muerto) { jefeVivo = true; return false; } return jefeVivo; }
             public bool Viva { get { return Td != null && Raiz != null && Raiz.gameObject.activeInHierarchy; } }
         }
 
@@ -86,13 +90,26 @@ namespace WitchHuntCoop
                 if (t - ultimoCatalogo > IntervaloCatalogo) { ultimoCatalogo = t; EnviarCatalogo(escenaLocal, ancla); }
             }
 
+            // (2026-11-20) muerte de un jefe (en cualquiera de los dos juegos): el viaje al pueblo que lanza el juego se permite siempre
+            foreach (var u in porId.Values)
+                if (!u.JefeMuertoVisto && u.Td != null && u.VistoVivoJefe(Dificultad.EsJefe(u.Td), Eventos.Muerto(u.Td)))
+                {
+                    u.JefeMuertoVisto = true; Viaje.MuerteJefe = t; plugin.Log("Combate: murió el jefe " + u.Nombre + " (el viaje al pueblo que siga queda permitido)");
+                    if (u.Nombre != null && u.Nombre.IndexOf("Worm", StringComparison.OrdinalIgnoreCase) >= 0)
+                    { Viaje.GusanoMuerto = t; plugin.Log("Combate: murió el gusano gigante: empieza el tramo final (los viajes ya no exigen estar a 15 m)"); }
+                }
+
             // Invitado: si su copia de un monstruo del anfitrión murió aquí (p. ej. con la espada, o se perdió algún
             // golpe por la red), se avisa al anfitrión para que mate el suyo; si no, el anfitrión lo seguía listando
             // vivo y el invitado lo volvía a crear en el mismo sitio una y otra vez (enemigos "duplicados", 2026-11-17).
             if (!red.EsAnfitrion)
                 foreach (var u in porId.Values)
                 {
-                    if (u.MuerteAvisada || u.Td == null || !Eventos.Muerto(u.Td)) continue;
+                    if (u.MuerteAvisada || u.Td == null) continue;
+                    if (!Eventos.Muerto(u.Td)) { u.VistoVivo = true; continue; }
+                    // (2026-11-20) solo si antes estuvo viva: la copia del hombre lobo llegaba con Health 0 (pelea sin empezar) y el
+                    // invitado avisaba su "muerte" al acercarse: el anfitrión mataba al jefe sin pelea y la historia avanzaba sola.
+                    if (!u.VistoVivo) continue;
                     u.MuerteAvisada = true; muertosAqui[u.Id] = t;
                     int idM = u.Id;
                     red.Enviar(TipoMensaje.MuerteInvitado, Red.Armar(w => w.Write(idM)));
@@ -378,16 +395,33 @@ namespace WitchHuntCoop
 
         TakeDamage Emparejar(string nombre, Vector3 p)
         {
-            TakeDamage mejor = null; float dMejor = RadioEmparejar;
+            TakeDamage mejor = null, historia = null; float dMejor = RadioEmparejar, dHistoria = float.MaxValue;
             foreach (var td in UnityEngine.Object.FindObjectsOfType<TakeDamage>())
             {
                 if (porTd.ContainsKey(td)) continue;
                 if (NombreDe(td) != nombre) continue;
                 float d = Vector3.Distance(td.transform.position, p);
                 if (d < dMejor) { dMejor = d; mejor = td; }
+                if (d < dHistoria && Dificultad.EsJefe(td)) { dHistoria = d; historia = td; }
+            }
+            // (2026-11-20) Criaturas de la historia (jefes, árbol de sacrificio…): caminan por todo el bosque y cada juego tiene la suya en
+            // otro sitio. Si no hay una cerca, el invitado trae LA SUYA a donde está la del anfitrión (no se crea otra: su muerte tiene que
+            // ocurrir en los dos juegos para que la historia avance igual en ambos).
+            if (mejor == null && historia != null)
+            {
+                var rz = RaizDe(historia);
+                var ag = rz.GetComponentInChildren<NavMeshAgent>();
+                NavMeshHit nh; Vector3 destino = p;
+                if (NavMesh.SamplePosition(p, out nh, 10f, NavMesh.AllAreas)) destino = nh.position;
+                if (ag != null && ag.isOnNavMesh) { try { ag.Warp(destino); } catch { rz.position = destino; } } else rz.position = destino;
+                plugin.Log("Combate: " + nombre + " (de la historia) traído junto al del anfitrión; estaba a " + Mathf.RoundToInt(dHistoria) + " m");
+                mejor = historia;
             }
             return mejor;
         }
+
+        /// ¿Este monstruo está en la lista sincronizada entre los dos juegos? (orden 'danarnombre')
+        public bool Sincronizado(TakeDamage td) { return td != null && porTd.ContainsKey(td); }
 
         /// Crea una copia del monstruo (desde el prefab en memoria) en la posición dada.
         readonly HashSet<string> sinPrefab = new HashSet<string>();
@@ -407,6 +441,11 @@ namespace WitchHuntCoop
                 if (g.name != nombre || g.scene.IsValid() || g.transform.parent != null) continue;
                 if (g.GetComponentInChildren<TakeDamage>(true) == null) continue;
                 prefab = g; break;
+            }
+            if (prefab != null && Dificultad.EsDeHistoria(prefab.transform))
+            {   // (2026-11-20) nunca criaturas de la historia (Elongata envía "Tree1_killed" al morir: contaba como árbol destruido)
+                if (sinPrefab.Add(nombre)) plugin.Log("No se genera '" + nombre + "': es una criatura de la historia (no se volverá a avisar)");
+                return null;
             }
             if (prefab == null && nombre == "Undead")
             {
@@ -439,6 +478,12 @@ namespace WitchHuntCoop
                 if (Physics.Raycast(pos + Vector3.up * 1.5f, Vector3.down, out hit, 10f)) pos = hit.point;
             }
             var go = (GameObject)UnityEngine.Object.Instantiate(prefab, pos, Quaternion.identity);
+            if (Dificultad.EsDeHistoria(go.transform))
+            {   // por si el prefab no dejó leer sus máquinas de estados: se revisa la copia antes de activarla
+                UnityEngine.Object.Destroy(go); sinPrefab.Add(nombre);
+                plugin.Log("No se genera '" + nombre + "': es una criatura de la historia (revisada la copia)");
+                return null;
+            }
             go.SetActive(true);
             var ag = go.GetComponentInChildren<NavMeshAgent>();
             if (ag != null) { try { ag.Warp(pos); } catch { } }

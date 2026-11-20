@@ -51,8 +51,19 @@ namespace WitchHuntCoop
             return m;
         }
 
+        public static float VigilarRecargaHasta; string vrUltimo = "";
+        void VigilarRecarga()
+        {
+            if (Time.time > VigilarRecargaHasta) return;
+            var pw = Rendimiento.Armas; if (pw == null || pw.aSources == null || pw.aSources.Length < 2 || pw.aSources[1] == null) return;
+            var a = pw.aSources[1];
+            string e = (a.clip != null ? a.clip.name : "-") + " suena=" + a.isPlaying + " virtual=" + a.isVirtual + " prio=" + a.priority + " vol=" + a.volume.ToString("0.00");
+            if (e != vrUltimo) { vrUltimo = e; plugin.Log("  recarga t=" + Time.time.ToString("0.00") + ": " + e); }
+        }
+
         public void Actualizar()
         {
+            VigilarRecarga();
             if (Bot && BotHasta > 0f && Time.time > BotHasta) { Bot = false; BotHasta = 0f; plugin.Log("  bot terminado"); }
             if (escenaPendiente != null && SceneManager.GetActiveScene().name == escenaPendiente && Time.timeSinceLevelLoad > 3f)
             {
@@ -113,6 +124,66 @@ namespace WitchHuntCoop
                     else if (pa[0] == "ajuste" && pa.Length >= 8)
                         ArmaCompanero.Ajustes[pa[1]] = new[] { new Vector3(float.Parse(pa[2], ci), float.Parse(pa[3], ci), float.Parse(pa[4], ci)), new Vector3(float.Parse(pa[5], ci), float.Parse(pa[6], ci), float.Parse(pa[7], ci)) };
                     plugin.Log("  " + ArmaCompanero.Informe(plugin));
+                    break;
+                }
+                case "musica":   // musica [on|off]: estado de la música del juego (SoundManager) y quién la silenció; on/off la cambia (2026-11-20)
+                    if ((arg == "on" || arg == "off") && RegistroMusica.Existente() != null) SoundManager.MuteMusic(arg == "off");   // (nunca SoundManager.Instance sin que exista)
+                    if (arg == "creditos" && RegistroMusica.Existente() != null) SoundManager.PlayConnection("final_ambient");   // prueba del fin del juego (FinalCoop): la música del final
+                    plugin.Log("  " + RegistroMusica.Informe());
+                    break;
+                case "fuentesarmas":   // fuentesarmas: las fuentes de audio del jugador para disparo (0) y recarga (1) (2026-11-20)
+                {
+                    var pw = Rendimiento.Armas;
+                    if (pw == null || pw.aSources == null) { plugin.Log("  sin PlayerWeapons"); break; }
+                    for (int k = 0; k < pw.aSources.Length; k++) { var a = pw.aSources[k]; if (a == null) continue;
+                        plugin.Log("  fuente " + k + ": clip=" + (a.clip != null ? a.clip.name : "-") + " suena=" + a.isPlaying + " virtual=" + a.isVirtual + " prio=" + a.priority + " vol=" + a.volume.ToString("0.00") + " mute=" + a.mute + " activa=" + a.isActiveAndEnabled + " 3D=" + a.spatialBlend.ToString("0.00")); }
+                    int sonando = 0, reales = 0; foreach (var a in UnityEngine.Object.FindObjectsOfType<AudioSource>()) if (a.isPlaying) { sonando++; if (!a.isVirtual) reales++; }
+                    plugin.Log("  fuentes sonando en la escena: " + sonando + " (reales " + reales + ")");
+                    break;
+                }
+                case "vigilarrecarga": VigilarRecargaHasta = Time.time + (arg.Length > 0 ? float.Parse(arg, System.Globalization.CultureInfo.InvariantCulture) : 8f); break;   // anota cada cambio de la fuente de recarga
+                case "historia":   // historia [vars <filtro>]: misiones del juego (estado y descripción) o variables del sistema de diálogos (2026-11-20)
+                {
+                    var db = PixelCrushers.DialogueSystem.DialogueManager.MasterDatabase;
+                    if (db == null) { plugin.Log("  sin base de diálogos"); break; }
+                    var pa = arg.Split(new[] { ' ' }, 2);
+                    if (pa[0] == "vars")
+                    {
+                        string fil = pa.Length > 1 ? pa[1].ToLowerInvariant() : ""; var sb = new System.Text.StringBuilder(); int n = 0;
+                        foreach (var v in db.variables)
+                        {
+                            if (v == null || (fil.Length > 0 && !v.Name.ToLowerInvariant().Contains(fil))) continue;
+                            string val; try { val = PixelCrushers.DialogueSystem.DialogueLua.GetVariable(v.Name).AsString; } catch { val = "?"; }
+                            sb.Append(v.Name).Append('=').Append(val).Append("; "); if (++n % 12 == 0) { plugin.Log("  " + sb); sb.Length = 0; }
+                        }
+                        if (sb.Length > 0) plugin.Log("  " + sb);
+                        plugin.Log("  (" + n + " variables)");
+                        break;
+                    }
+                    if (pa[0] == "dialogos")   // historia dialogos <filtro>: entradas de conversación cuyo guion o condición contengan el texto
+                    {
+                        string fil = pa.Length > 1 ? pa[1] : ""; int n = 0;
+                        foreach (var cv in db.conversations)
+                            foreach (var de in cv.dialogueEntries)
+                            {
+                                string sc = de.userScript ?? "", co = de.conditionsString ?? "";
+                                if (fil.Length > 0 && sc.IndexOf(fil, StringComparison.OrdinalIgnoreCase) < 0 && co.IndexOf(fil, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                                string txt = de.DialogueText ?? ""; if (txt.Length > 60) txt = txt.Substring(0, 60) + "…";
+                                plugin.Log("  conv " + cv.id + " '" + cv.Title + "' #" + de.id + " cond[" + co + "] guion[" + sc + "] texto[" + txt + "]");
+                                if (++n > 60) break;
+                            }
+                        plugin.Log("  (" + n + " entradas)");
+                        break;
+                    }
+                    int k = 0;
+                    foreach (var it in db.items)
+                    {
+                        if (it == null || it.IsItem) continue;
+                        string nom = it.Name, est = PixelCrushers.DialogueSystem.QuestLog.GetQuestState(nom).ToString();
+                        string desc = PixelCrushers.DialogueSystem.QuestLog.GetQuestDescription(nom) ?? "";
+                        if (desc.Length > 140) desc = desc.Substring(0, 140) + "…";
+                        plugin.Log("  misión " + (k++) + " [" + est + "] '" + nom + "': " + desc.Replace("\n", " ").Replace("\r", ""));
+                    }
                     break;
                 }
                 case "fuegoamigo":   // fuegoamigo [1|0]: activa/apaga en la partida (anfitrión) y dice el estado (2026-11-20)
@@ -1263,6 +1334,59 @@ namespace WitchHuntCoop
                     if (j != null) { j.GodMode = arg != "off"; j.hitPoints = Mathf.Max(j.hitPoints, 100f); plugin.Log("  modo dios " + j.GodMode); }
                     break;
                 }
+                case "irjefe":   // irjefe [dist]: junto al jefe vivo más cercano (cualquier distancia) (2026-11-20)
+                case "danarjefe":   // danarjefe <n>: daño n al jefe vivo más cercano por su zona de daño real (como un balazo) (2026-11-20)
+                {
+                    var jj = UnityEngine.Object.FindObjectOfType<FPSPlayer>(); if (jj == null) break;
+                    TakeDamage jefe = null; float dm = float.MaxValue;
+                    foreach (var td in UnityEngine.Object.FindObjectsOfType<TakeDamage>())
+                    {
+                        if (td == null || td.GetComponentInParent<FPSPlayer>() != null || Eventos.Muerto(td) || !Dificultad.EsJefe(td)) continue;
+                        float d = Vector3.Distance(td.transform.position, jj.transform.position); if (d < dm) { dm = d; jefe = td; }
+                    }
+                    if (jefe == null) { plugin.Log("  no hay jefes vivos"); break; }
+                    var rz = Combate.RaizDe(jefe);
+                    if (orden == "irjefe")
+                    {
+                        float dist = arg.Length > 0 ? float.Parse(arg, System.Globalization.CultureInfo.InvariantCulture) : 10f;
+                        Vector3 m = jefe.transform.position, dir = jj.transform.position - m; dir.y = 0; if (dir.sqrMagnitude < 0.01f) dir = Vector3.forward; dir.Normalize();
+                        Vector3 dest = m + dir * dist; UnityEngine.AI.NavMeshHit nh;
+                        if (UnityEngine.AI.NavMesh.SamplePosition(dest, out nh, 15f, UnityEngine.AI.NavMesh.AllAreas)) dest = nh.position;
+                        jj.transform.position = dest + Vector3.up * 1.2f; var rb = jj.GetComponent<Rigidbody>(); if (rb != null) { rb.position = jj.transform.position; rb.velocity = Vector3.zero; }
+                        plugin.Log("  junto a " + rz.name + " en " + (m - Anclaje.Origen()).ToString("F0") + " (estaba a " + Mathf.RoundToInt(dm) + " m)");
+                        break;
+                    }
+                    CharacterDamagePlaymakerAI zona = null;
+                    foreach (var z in rz.GetComponentsInChildren<CharacterDamagePlaymakerAI>()) if (z.ai == jefe) { zona = z; break; }
+                    float cant = arg.Length > 0 ? float.Parse(arg, System.Globalization.CultureInfo.InvariantCulture) : 100f;
+                    if (zona != null) zona.ApplyDamage(cant, false); else jefe.Damage(cant, false);
+                    plugin.Log("  daño " + cant + " a " + rz.name + " (" + (zona != null ? "zona " + zona.name : "directo") + ") a " + Mathf.RoundToInt(dm) + " m");
+                    break;
+                }
+                case "danarnombre":   // danarnombre <texto> [n]: daño n (0 = solo informe) al monstruo cuya raíz contenga el texto, aunque su vida esté en 0 (2026-11-20)
+                {
+                    var pa = arg.Split(' '); float cant = pa.Length > 1 ? float.Parse(pa[1], System.Globalization.CultureInfo.InvariantCulture) : 0f;
+                    int n = 0;
+                    foreach (var td in UnityEngine.Object.FindObjectsOfType<TakeDamage>())
+                    {
+                        if (td == null || td.GetComponentInParent<FPSPlayer>() != null) continue;
+                        if (td.transform.root.name.IndexOf(pa[0], StringComparison.OrdinalIgnoreCase) < 0) continue;
+                        var f = PlayMakerFSM.FindFsmOnGameObject(td.gameObject, td.NameOfFsm); var h = f != null ? f.FsmVariables.FindFsmFloat("Health") : null;
+                        var rz = Combate.RaizDe(td);
+                        plugin.Log("  " + td.transform.root.name + "/" + td.name + " td en " + td.transform.position.ToString("F0") + " raíz-unidad " + rz.name + " en " + rz.position.ToString("F0")
+                            + " vida=" + (h != null ? h.Value.ToString("0") : "?") + " jefe=" + Dificultad.EsJefe(td) + " sincronizado=" + (plugin.combate != null && plugin.combate.Sincronizado(td)));
+                        if (cant > 0f)
+                        {
+                            CharacterDamagePlaymakerAI zona = null;
+                            foreach (var z in rz.GetComponentsInChildren<CharacterDamagePlaymakerAI>()) if (z.ai == td) { zona = z; break; }
+                            if (zona != null) zona.ApplyDamage(cant, false); else td.Damage(cant, false);
+                            plugin.Log("    daño " + cant + (zona != null ? " por la zona " + zona.name : " directo"));
+                        }
+                        if (++n >= 4) break;
+                    }
+                    if (n == 0) plugin.Log("  no hay monstruos '" + pa[0] + "'");
+                    break;
+                }
                 case "irmonstruo": IrMonstruo(arg.Length > 0 ? float.Parse(arg, System.Globalization.CultureInfo.InvariantCulture) : 20f); break;
                 case "escena":
                     // Igual que el cambio de nivel del juego: guarda armas/variables antes de salir.
@@ -1406,7 +1530,7 @@ namespace WitchHuntCoop
                             foreach (var a in st.Actions)
                             {
                                 if (a == null) continue;
-                                var sb = new System.Text.StringBuilder(); bool hay = false;
+                                var sb = new System.Text.StringBuilder(); bool hay = a.GetType().Name.IndexOf(arg, StringComparison.OrdinalIgnoreCase) >= 0;   // también por tipo de acción
                                 foreach (var c in a.GetType().GetFields())
                                 {
                                     object v = null; try { v = c.GetValue(a); } catch { }
