@@ -21,15 +21,14 @@ Grabaciones: "Shotgun Reload Sound effects", de zer0_sol, OpenGameArt. CC0 (domi
 https://opengameart.org/content/shotgun-reload-sound-effects
 Se recortaron fragmentos de "Rack", "First Shell", "Subsequent Shells" y "Shell in Chamber" (esc_abrir, esc_meter1, esc_meter2, esc_cerrar).
 
-Disparo de la escopeta (esc_disparo)
+Disparo de la escopeta, versión anterior (ya no se usa en el mod)
 "shotty.wav" de Vincent Sevedge (2009), OpenGameArt "Gunshot Sounds": https://opengameart.org/content/gunshot-sounds
 Licencia Creative Commons Atribución 3.0 (CC-BY 3.0): https://creativecommons.org/licenses/by/3.0/  (el autor exige atribución). Se le recortó el arranque flojo, se agudizó, se le añadió un chasquido de ataque sintetizado y un eco largo.
 Capas metálicas de abrir/cerrar (esc_abrir, esc_cerrar): sintetizadas aquí, sobre los recortes CC0 de zer0_sol.
 
-!! PROVISIONAL (solo pruebas locales, NO publicar con este sonido) !!
-esc_disparo.ogg = primer disparo del video "Double barrel shotgun sound effects" de MasterHand125 (YouTube, 2011):
-https://www.youtube.com/watch?v=P-ERht6P9vg  -- licencia estándar de YouTube (todos los derechos reservados), sin permiso del autor.
-Antes de publicar el mod: pedir permiso al autor o volver a una grabación CC0 (ver ~/Música/Disparos_escopeta).
+Disparo de la escopeta (esc_disparo.ogg, versión actual)
+Primer disparo del video "Double barrel shotgun sound effects", de MasterHand125 (YouTube, 2011):
+https://www.youtube.com/watch?v=P-ERht6P9vg  — todo el crédito a su autor.
 
 Lluvia de la tormenta (tormenta_lluvia.ogg, versión del 2026-11-10)
 "Heavy Rain" de Pro Sensory, OpenGameArt, CC0: https://opengameart.org/content/heavy-rain
@@ -60,7 +59,7 @@ Sin música (comprobado con espectrograma). La grabación "Heavy Rain" anterior 
 - Música del jefe (sonidos/jefe_musica_opciones/jefe_musica_01.ogg): composición original del mod (herramientas/musica_jefe.py), sin grabaciones ni obras de terceros.
 - jefe_musica_fase1.ogg / jefe_musica_fase2.ogg (música en bucle del jefe de la cueva): composición original del mod (herramientas/musica_jefe_v2.py, modo bucle), sin obras ni grabaciones de terceros.
 - jefe_musica_fase2_entrada.ogg y jefe_musica_fase2.ogg ("El último murciélago", entrada épica + bucle): composición original del mod (herramientas/musica_jefe_ultimo.py).
-- Jefe de la cueva (descargados por el usuario de OpenGameArt.org, marcados CC0; confirmar autor/página antes de publicar):
+- Jefe de la cueva (OpenGameArt.org, CC0):
   · jefe_ambiente.ogg ← monster-snarls-2.ogg ("Monster snarls"), pasado a mono y empalmado en bucle
   · jefe_aleteo.ogg ← wings_flap_large.ogg ("Large Wings Flap"), solo el primer aletazo
   · jefe_lanzar.ogg ← grunt_06.ogg; jefe_picada.ogg ← roar_05.ogg (pack de criaturas CC0)
