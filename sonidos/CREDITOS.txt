@@ -1,0 +1,67 @@
+Campanas de la Luna de sangre
+Grabación: "Church Bells" (Leverkusen, 2007), de natalie, vía pdsounds.org.
+Dominio público: https://commons.wikimedia.org/wiki/File:Church_bells_-_Leverkusen,_2007.oga
+Se usa en la entrada "campana iglesia oscura": 1 s de silencio, una campanada fuerte (golpe de la
+Petersglocke) con 3 s de eco, el repique de Leverkusen más lento y grave con eco, y al final las dos
+primeras campanadas de la campana sola, que empalma con ella.
+
+Campana sola (1 minuto, un golpe cada 2 segundos)
+Grabación: Petersglocke, la campana mayor de la catedral de Colonia, de BIGBEN12345 vía freesound.org.
+CC0 (dedicación al dominio público): https://commons.wikimedia.org/wiki/File:200437_bigben12345_petersglocke.oga
+Se aisló un solo golpe (sin los impactos que lo siguen), se hizo más lento y grave, y se repite cada 2 segundos durante 1 minuto, lejana (sin agudos) y con mucho eco de catedral.
+
+Tormenta (lluvia y truenos)
+Lluvia de fondo (2026-11-11: reemplazada por ruido rosa generado, sin música). Antes: "Rain and thunder (1)", de ezwa (pdsounds.org). Dominio público:
+https://commons.wikimedia.org/wiki/File:Rain_and_thunder_(1).ogg  (volumen ajustado y empalmada para sonar en bucle)
+Trueno: "Rain and thunder", de User:Caesar (Estocolmo, 2006). Dominio público:
+https://commons.wikimedia.org/wiki/File:Rain_and_thunder.ogg  (recortado al trueno, volumen ajustado)
+
+Escopeta de quiebre (abrir, meter las balas, cerrar)
+Grabaciones: "Shotgun Reload Sound effects", de zer0_sol, OpenGameArt. CC0 (dominio público):
+https://opengameart.org/content/shotgun-reload-sound-effects
+Se recortaron fragmentos de "Rack", "First Shell", "Subsequent Shells" y "Shell in Chamber" (esc_abrir, esc_meter1, esc_meter2, esc_cerrar).
+
+Disparo de la escopeta (esc_disparo)
+"shotty.wav" de Vincent Sevedge (2009), OpenGameArt "Gunshot Sounds": https://opengameart.org/content/gunshot-sounds
+Licencia Creative Commons Atribución 3.0 (CC-BY 3.0): https://creativecommons.org/licenses/by/3.0/  (el autor exige atribución). Se le recortó el arranque flojo, se agudizó, se le añadió un chasquido de ataque sintetizado y un eco largo.
+Capas metálicas de abrir/cerrar (esc_abrir, esc_cerrar): sintetizadas aquí, sobre los recortes CC0 de zer0_sol.
+
+!! PROVISIONAL (solo pruebas locales, NO publicar con este sonido) !!
+esc_disparo.ogg = primer disparo del video "Double barrel shotgun sound effects" de MasterHand125 (YouTube, 2011):
+https://www.youtube.com/watch?v=P-ERht6P9vg  -- licencia estándar de YouTube (todos los derechos reservados), sin permiso del autor.
+Antes de publicar el mod: pedir permiso al autor o volver a una grabación CC0 (ver ~/Música/Disparos_escopeta).
+
+Lluvia de la tormenta (tormenta_lluvia.ogg, versión del 2026-11-10)
+"Heavy Rain" de Pro Sensory, OpenGameArt, CC0: https://opengameart.org/content/heavy-rain
+Se recortó un minuto, se bajó el volumen y se empalmó en bucle con un fundido de 1,5 s.
+
+Sonidos de terror ambiental de la Noche oscura (terror_01 … terror_30, 2026-11-12). Reemplazan a los sonidos sintetizados.
+Todos CC0 / dominio público (OpenGameArt). Recortados a 14 s como máximo, pasados a mono y con el volumen igualado:
+- terror_01 … terror_22: "Horror Hit Soundpack 1", de psychhead_. CC0. https://opengameart.org/content/horror-hit-soundpack-1  (golpes y texturas de terror: graves, medios y agudos)
+- terror_23 … terror_26: "Ghost Monster Voice Moaning & Growling" (GhostMoan01–04), de qubodup. CC0. https://opengameart.org/content/ghost-monster-voice-moaning-growling
+- terror_27, terror_28: "Horror SFX" (horror_effect1 y 2), de TinyWorlds. CC0. https://opengameart.org/content/horror-sfx
+- terror_29: "Ambient horror", de techiew. CC0. https://opengameart.org/content/ambient-horror
+- terror_30: "Horror Hit Soundpack 1" (Bassy 10), de psychhead_. CC0.
+
+moneda.ogg: sintetizada para este mod (ffmpeg, tonos con caída exponencial); sin derechos de terceros.
+
+Lluvia de la tormenta (tormenta_lluvia.ogg, versión del 2026-11-18; reemplaza la lluvia sintetizada)
+"Heavy Rain" de Pro Sensory, OpenGameArt, CC0: https://opengameart.org/content/heavy-rain
+(recortada a 60 s, en mono, con el final fundido sobre el comienzo para sonar en bucle)
+
+Lluvia de la tormenta (tormenta_lluvia.ogg, versión del 2026-11-18 noche)
+Generada por el mod con ffmpeg (ruido rosa, blanco y marrón filtrados + gotas al azar con eco corto), 60 s en bucle.
+Sin música (comprobado con espectrograma). La grabación "Heavy Rain" anterior tenía música de fondo y se retiró
+(queda como tormenta_lluvia_heavyrain_con_musica.ogg.bak, fuera del mod).
+
+- ojo_muerte.ogg (muerte del Ojo de la Torre): sintetizado por el mod desde cero, sin grabaciones (coro oscuro que se desploma; herramientas/sonido_ojo_05_mejorado.py, versión larga de 12 s). Libre, como el resto del mod.
+
+- jefe_picada.ogg y jefe_agarre.ogg (jefe de la cueva): sintetizados por el mod desde cero (herramientas/sonidos_jefe.py). Opciones en sonidos/jefe_opciones/.
+- Música del jefe (sonidos/jefe_musica_opciones/jefe_musica_01.ogg): composición original del mod (herramientas/musica_jefe.py), sin grabaciones ni obras de terceros.
+- jefe_musica_fase1.ogg / jefe_musica_fase2.ogg (música en bucle del jefe de la cueva): composición original del mod (herramientas/musica_jefe_v2.py, modo bucle), sin obras ni grabaciones de terceros.
+- jefe_musica_fase2_entrada.ogg y jefe_musica_fase2.ogg ("El último murciélago", entrada épica + bucle): composición original del mod (herramientas/musica_jefe_ultimo.py).
+- Jefe de la cueva (descargados por el usuario de OpenGameArt.org, marcados CC0; confirmar autor/página antes de publicar):
+  · jefe_ambiente.ogg ← monster-snarls-2.ogg ("Monster snarls"), pasado a mono y empalmado en bucle
+  · jefe_aleteo.ogg ← wings_flap_large.ogg ("Large Wings Flap"), solo el primer aletazo
+  · jefe_lanzar.ogg ← grunt_06.ogg; jefe_picada.ogg ← roar_05.ogg (pack de criaturas CC0)
+- jefe_roca_impacto.ogg (choque de la roca del jefe): mezcla de grabaciones reales — "Impact Sounds" de Kenney (CC0 1.0) y "Assorted gravel rock and stones" de stephan (Wikimedia Commons, dominio público); armado con herramientas/roca_impacto.py.

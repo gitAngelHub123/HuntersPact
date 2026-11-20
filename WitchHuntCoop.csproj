@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- (2026-11-20) versión de pruebas: dotnet build -c Release -p:Pruebas=true (órdenes de prueba, F8, F11). Sin eso = versión pública. -->
+  <PropertyGroup Condition="'$(Pruebas)'=='true'">
+    <DefineConstants>$(DefineConstants);PRUEBAS</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup>
+    <!-- Witch Hunt usa Unity 5.6 con Mono (perfil .NET 3.5) -->
+    <TargetFramework>net35</TargetFramework>
+    <AssemblyName>WitchHuntCoop</AssemblyName>
+    <RootNamespace>WitchHuntCoop</RootNamespace>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <GameDir>$(HOME)/.local/share/Steam/steamapps/common/Witch Hunt</GameDir>
+    <BepInExDir>$(MSBuildProjectDirectory)/descargas/bepinex/BepInEx/core</BepInExDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="referencia/**;descargas/**;release/**;herramientas/**" />
+    <EmbeddedResource Include="iconos/*.png" LogicalName="iconos.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="sonidos/*.ogg" LogicalName="sonidos.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="$(BepInExDir)/BepInEx.dll" Private="false" />
+    <Reference Include="$(BepInExDir)/0Harmony.dll" Private="false" />
+    <Reference Include="$(GameDir)/Witch_Hunt_Data/Managed/UnityEngine.dll" Private="false" />
+    <Reference Include="$(GameDir)/Witch_Hunt_Data/Managed/Assembly-CSharp.dll" Private="false" />
+    <Reference Include="$(GameDir)/Witch_Hunt_Data/Managed/PlayMaker.dll" Private="false" />
+    <Reference Include="$(GameDir)/Witch_Hunt_Data/Managed/Assembly-CSharp-firstpass.dll" Private="false" />
+    <Reference Include="$(GameDir)/Witch_Hunt_Data/Managed/UnityEngine.UI.dll" Private="false" />
+    <Reference Include="$(GameDir)/Witch_Hunt_Data/Managed/DialogueSystem.dll" Private="false" />
+    <Reference Include="$(GameDir)/Witch_Hunt_Data/Managed/ES2.dll" Private="false" />
+    <Reference Include="$(GameDir)/Witch_Hunt_Data/Managed/Rewired_Core.dll" Private="false" />
+  </ItemGroup>
+
+</Project>
