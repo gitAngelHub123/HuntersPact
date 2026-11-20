@@ -51,6 +51,7 @@ namespace WitchHuntCoop
             return m;
         }
 
+        static readonly Dictionary<string, int> danoOriginal = new Dictionary<string, int>();   // orden 'danoarma'
         public static float VigilarRecargaHasta; string vrUltimo = "";
         void VigilarRecarga()
         {
@@ -183,6 +184,21 @@ namespace WitchHuntCoop
                         string desc = PixelCrushers.DialogueSystem.QuestLog.GetQuestDescription(nom) ?? "";
                         if (desc.Length > 140) desc = desc.Substring(0, 140) + "…";
                         plugin.Log("  misión " + (k++) + " [" + est + "] '" + nom + "': " + desc.Replace("\n", " ").Replace("\r", ""));
+                    }
+                    break;
+                }
+                case "danoarma":   // danoarma <nombre> <factor>: multiplica el daño de esa arma en vivo (p. ej. danoarma Pistol 20); factor 1 = original (2026-11-20)
+                {
+                    var pa = arg.Split(' '); var pw = Rendimiento.Armas;
+                    if (pa.Length < 2 || pw == null || pw.weaponOrder == null) { plugin.Log("  uso: danoarma <nombre> <factor>"); break; }
+                    float fac = float.Parse(pa[1], System.Globalization.CultureInfo.InvariantCulture);
+                    foreach (var w in pw.weaponOrder)
+                    {
+                        if (w == null || w.name.IndexOf(pa[0], StringComparison.OrdinalIgnoreCase) < 0) continue;
+                        var wb = w.GetComponent<WeaponBehavior>(); if (wb == null) continue;
+                        int orig; if (!danoOriginal.TryGetValue(w.name, out orig)) { orig = wb.damage; danoOriginal[w.name] = orig; }
+                        wb.damage = Mathf.RoundToInt(orig * fac);   // LibrosTienda toma este valor como base nueva (no lo pisa)
+                        plugin.Log("  " + w.name + ": daño " + orig + " × " + fac + " = " + wb.damage);
                     }
                     break;
                 }

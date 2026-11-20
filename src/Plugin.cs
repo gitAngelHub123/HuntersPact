@@ -13,7 +13,7 @@ namespace WitchHuntCoop
     {
         public const string Guid = "angel.witchhunt.coop";
         public const string Nombre = "Hunters' Pact";   // (2026-11-20) nombre público del mod (GUID y DLL se mantienen para no duplicar instalaciones)
-        public const string Version = "0.2.1";
+        public const string Version = "0.2.2";
 
         const float IntervaloEstado = 0.05f;   // 20 envíos por segundo
         const float IntervaloHola = 1f;

@@ -41,7 +41,13 @@ namespace WitchHuntCoop
         public const float RadioSeguro = 0.70f, MargenTecho = 12f;
         // formas de vuelo de la fase 1: 0 círculo, 1 ocho, 2 de esquina a esquina, 3 ola (sube y baja), 4 espiral que se cierra
         int patron = -1; float patronIni, patronHasta, patronR, patronAlto, patronDir, patronAng; Vector3 patronA, patronB;
-        Vector3 garrasPrev; bool hayGarrasPrev;
+        Vector3 garrasPrev, cuerpoPrev; bool hayGarrasPrev;
+        // (2026-11-20) el agarre no ocurría NUNCA: Pensar() pasaba de Picada a Subida en el mismo cuadro en que llegaba (antes de Agarres()),
+        // y el cuerpo apuntaba a 1 m de los pies con las garras ~2 m más abajo (al suelo). Ahora: ventana de 0,3 s tras la picada, el cuerpo
+        // baja hasta que las GARRAS queden a la altura del pecho, y cuenta también el paso del cuerpo cerca.
+        float picadaHasta = -1f;
+        const float AlturaGarras = 1.6f * Escala * 0.6f;   // las garras cuelgan esto bajo el cuerpo
+        int picadasN, agarresN;
         public const int RocasCielo = 8;
         bool rocaLanzada2, cieloLanzado; float rodeoHasta, trabaT, trabaDist, forzarHasta; int rodeoLado = 1, forzar = -1;
         Transform modelo;
@@ -182,6 +188,8 @@ namespace WitchHuntCoop
         void CambiarFase(Fase f)
         {
             if (fase == f) return;
+            if (fase == Fase.Picada) picadaHasta = Time.time + 0.3f;   // el agarre se sigue comprobando un instante tras la picada
+            if (f == Fase.Picada) { picadasN++; Debug.Log("[WitchHuntCoop] Jefe de la cueva: picada " + picadasN + " (agarres " + agarresN + ")"); }
             fase = f; tFase = 0f; golpeAplicado = false; rocaLanzada = false; rocaLanzada2 = false; cieloLanzado = false;
             if (f == Fase.Agarre) arribaDesde = -1f;
             // picada: sonido propio del mod (2026-11-19); si no cargó, el grito del juego
@@ -388,11 +396,11 @@ namespace WitchHuntCoop
                     if (patron < 0 || Time.time > patronHasta) ElegirPatron();
                     objetivo = PuntoPatron();
                     Volar(objetivo, 10f * VueloX, dt);
-                    if (Time.time > proxPicada && dist < 70f) { objetivo = jug + Vector3.up * 1.2f; CambiarFase(Fase.Picada); }
+                    if (Time.time > proxPicada && dist < 70f) { objetivo = jug + Vector3.up * (1.2f + AlturaGarras); CambiarFase(Fase.Picada); }
                     break;
                 }
                 case Fase.Picada:   // va a TU posición con las garras por delante
-                    if (tFase < 0.6f / AtaqueX * 1.5f) objetivo = jug + Vector3.up * 1.0f;
+                    if (tFase < 0.6f / AtaqueX * 1.5f) objetivo = jug + Vector3.up * (1.2f + AlturaGarras);   // las garras al pecho
                     Volar(objetivo, 24f * AtaqueX, dt);
                     if (Vector3.Distance(transform.position, objetivo) < 2.2f || transform.position.y < suelo + 1.6f || tFase > 4f / AtaqueX) CambiarFase(Fase.Subida);
                     break;
@@ -654,6 +662,13 @@ namespace WitchHuntCoop
 
         // ---------------- Agarre (fase 1) ----------------
 
+        static float DistSegmento(Vector3 p, Vector3 a, Vector3 b)
+        {
+            Vector3 seg = b - a;
+            float t = seg.sqrMagnitude > 0.0001f ? Mathf.Clamp01(Vector3.Dot(p - a, seg) / seg.sqrMagnitude) : 0f;
+            return Vector3.Distance(p, a + seg * t);
+        }
+
         void Agarres()
         {
             var j = Mio; if (j == null) return;
@@ -662,16 +677,21 @@ namespace WitchHuntCoop
             Vector3 garras = transform.position - transform.up * 1.6f * Escala * 0.6f;
             if (!llevando)
             {
-                if (fase != Fase.Picada || Time.time < proxAgarre) return;
-                Vector3 ga = hayGarrasPrev && (garrasPrev - garras).sqrMagnitude < 36f ? garrasPrev : garras;
-                garrasPrev = garras; hayGarrasPrev = true;
-                Vector3 pj = j.transform.position + Vector3.up * 1f, seg = garras - ga;
-                float tt = seg.sqrMagnitude > 0.0001f ? Mathf.Clamp01(Vector3.Dot(pj - ga, seg) / seg.sqrMagnitude) : 0f;
-                if (Vector3.Distance(pj, ga + seg * tt) > 3.2f) return;
+                bool enPicada = fase == Fase.Picada || (fase == Fase.Subida && Time.time < picadaHasta);
+                if (!enPicada || Time.time < proxAgarre) { hayGarrasPrev = false; return; }
+                bool hayPrev = hayGarrasPrev && (garrasPrev - garras).sqrMagnitude < 100f;
+                Vector3 ga = hayPrev ? garrasPrev : garras, ca = hayPrev ? cuerpoPrev : transform.position;
+                garrasPrev = garras; cuerpoPrev = transform.position; hayGarrasPrev = true;
+                Vector3 pj = j.transform.position + Vector3.up * 1f;
+                // distancia del pecho del jugador al tramo recorrido por las garras y por el cuerpo en este cuadro
+                float dg = DistSegmento(pj, ga, garras), dc = DistSegmento(pj, ca, transform.position);
+                if (dg > 3.2f && dc > 3.6f) return;
+                agarresN++;
+                Debug.Log("[WitchHuntCoop] Jefe de la cueva: agarre " + agarresN + " de " + picadasN + " picadas (garras a " + dg.ToString("0.0") + " m, cuerpo a " + dc.ToString("0.0") + " m)");
                 // ¡agarrado!
                 llevando = true; llevandoDesde = Time.time; proxDanoAgarre = Time.time + CadaDanoAgarre;
                 if (rbJugador != null) { kinAntes = rbJugador.isKinematic; rbJugador.isKinematic = true; rbJugador.velocity = Vector3.zero; }
-                Viaje.Avisar("¡Te agarró con las garras!", 2.5f);
+                // (2026-11-20, pedido) sin aviso en pantalla al agarrar
                 // (2026-11-19) sin sonido propio al agarrar: ya suena el rugido de la picada (antes un golpe fuerte que quedaba mal)
                 if (autoridad) { altAgarre = Mathf.Min(TechoSeguro(centro) - 3f, suelo + 30f + Random.value * 20f); CambiarFase(Fase.Agarre); }
                 else if (alAgarrarmeRemoto != null) alAgarrarmeRemoto();
@@ -689,7 +709,7 @@ namespace WitchHuntCoop
                 llevando = false; proxAgarre = Time.time + 8f;
                 esperandoCaida = true; caidaY = ultimoY = j.transform.position.y; caidaHasta = Time.time + 12f; quietoDesde = -1f;
                 if (rbJugador != null) { rbJugador.isKinematic = kinAntes; rbJugador.velocity = Vector3.down * 2f; }
-                Viaje.Avisar("Te soltó…", 2f);
+                // (2026-11-20, pedido) sin aviso en pantalla al soltar
             }
         }
 

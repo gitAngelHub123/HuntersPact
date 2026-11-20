@@ -3,7 +3,7 @@
 **Mod cooperativo para 2 jugadores de [Witch Hunt](https://store.steampowered.com/app/661790/) (BepInEx 5).**
 Invita a un amigo de Steam y salgan a cazar juntos en un mundo ampliado.
 
-> ⚠️ **Versión beta (v0.2.1).** Probado en Linux (Proton) y Windows, con invitación de Steam entre dos cuentas.
+> ⚠️ **Versión beta (v0.2.2).** Probado en Linux (Proton) y Windows, con invitación de Steam entre dos cuentas.
 > Si algo falla, abre un *issue* contando qué pasó y adjunta tu archivo `BepInEx\LogOutput.log`.
 
 ## Qué trae
