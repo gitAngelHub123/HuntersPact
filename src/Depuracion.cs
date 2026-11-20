@@ -100,9 +100,25 @@ namespace WitchHuntCoop
                 case "elegir":   // elegir continuar | elegir nueva [0|1|2 = normal|difícil|pesadilla] (anfitrión)
                 {
                     var pa = arg.Split(' ');
-                    plugin.MenuSalaActual.OrdenElegir(pa[0] == "nueva" ? 1 : 0, pa.Length > 1 ? int.Parse(pa[1]) : 0);
+                    if (pa[0] == "nueva") Opciones.FuegoAmigoElegido = System.Array.IndexOf(pa, "fa") > 0 ? 1 : 0;   // elegir nueva <dif> fa = con fuego amigo (2026-11-20)
+                    plugin.MenuSalaActual.OrdenElegir(pa[0] == "nueva" ? 1 : 0, pa.Length > 1 && pa[1] != "fa" ? int.Parse(pa[1]) : 0);
                     break;
                 }
+                case "armacomp":   // armacomp | armacomp ver <n>|off | armacomp ajuste <nombre> rx ry rz px py pz | armacomp rehacer (2026-11-20)
+                {
+                    var pa = arg.Split(' '); var ci = System.Globalization.CultureInfo.InvariantCulture;
+                    if (pa[0] == "ver") ArmaCompanero.Forzado = pa.Length > 1 && pa[1] != "off" ? int.Parse(pa[1]) : -1;
+                    else if (pa[0] == "rehacer") ArmaCompanero.Limpiar();
+                    else if (pa[0] == "pose" && pa.Length > 1) { ArmaCompanero.ForzadoBanderas = (byte)(pa[1] == "apuntar" ? 1 : pa[1] == "recargar" ? 2 : 0); if (pa[1] == "tiro") ArmaCompanero.ForzadoTiro = true; }   // con 'ver n': apuntar|tiro|nada|recargar
+                    else if (pa[0] == "ajuste" && pa.Length >= 8)
+                        ArmaCompanero.Ajustes[pa[1]] = new[] { new Vector3(float.Parse(pa[2], ci), float.Parse(pa[3], ci), float.Parse(pa[4], ci)), new Vector3(float.Parse(pa[5], ci), float.Parse(pa[6], ci), float.Parse(pa[7], ci)) };
+                    plugin.Log("  " + ArmaCompanero.Informe(plugin));
+                    break;
+                }
+                case "fuegoamigo":   // fuegoamigo [1|0]: activa/apaga en la partida (anfitrión) y dice el estado (2026-11-20)
+                    if (arg == "1" || arg == "0") PixelCrushers.DialogueSystem.DialogueLua.SetVariable(Opciones.VarFuegoAmigo, arg == "1");
+                    plugin.Log("  " + FuegoAmigo.Informe(plugin));
+                    break;
                 case "sala":   // sala crear|unirse|aceptar|cerrar: el cuadro del menú principal
                     if (arg == "aceptar") plugin.MenuSalaActual.OrdenAceptar();
                     else if (arg == "cerrar") plugin.MenuSalaActual.OrdenCerrar();
@@ -114,6 +130,8 @@ namespace WitchHuntCoop
                 case "botones": ListarBotones(); break;
                 case "boton": Pulsar(arg); break;
                 case "captura": Captura(arg); break;
+                case "fotolimpia": plugin.StartCoroutine(Foto(arg)); break;
+                case "fotodesde": plugin.StartCoroutine(FotoDesde(arg)); break;   // fotodesde x y z tx ty tz [zoom fov] [luz] [nombre]: la cámara solo para la foto (no despierta al jefe)   // fotolimpia <nombre>: sin interfaz ni arma, 2× resolución (2026-11-20)
                 case "catalogo": Catalogo.Hacer(plugin, arg); break;
                 case "lugares": plugin.Log("  " + plugin.mundo.DescribirLugares()); break;
                 case "mapa": plugin.Log("  " + plugin.mapa.Describir()); break;
@@ -2794,6 +2812,81 @@ namespace WitchHuntCoop
             int i = 0;
             while (t.parent != null && i++ < 4) { t = t.parent; r = t.name + "/" + r; }
             return r;
+        }
+
+        /// Foto para publicar: oculta la interfaz (juego y mod), el arma y las manos, saca la captura al doble de resolución y lo devuelve todo.
+        public static bool ModoFoto;
+        System.Collections.IEnumerator Foto(string nombre)
+        {
+            Directory.CreateDirectory(carpetaCapturas);
+            if (nombre.Length == 0) nombre = "foto_" + DateTime.Now.ToString("HHmmss");
+            string ruta = Path.Combine(carpetaCapturas, nombre + ".png");
+            ModoFoto = true;
+            var apagados = new List<Behaviour>(); var renders = new List<Renderer>();
+            foreach (var c in UnityEngine.Object.FindObjectsOfType<Canvas>()) if (c.enabled) { c.enabled = false; apagados.Add(c); }
+            foreach (var g in UnityEngine.Object.FindObjectsOfType<GUIText>()) if (g.enabled) { g.enabled = false; apagados.Add(g); }
+            foreach (var g in UnityEngine.Object.FindObjectsOfType<GUITexture>()) if (g.enabled) { g.enabled = false; apagados.Add(g); }
+            var pw = UnityEngine.Object.FindObjectOfType<PlayerWeapons>();
+            if (pw != null) foreach (var r in pw.GetComponentsInChildren<Renderer>()) if (r.enabled) { r.enabled = false; renders.Add(r); }
+            yield return null; yield return null;
+            Application.CaptureScreenshot(ruta, 2);
+            for (int i = 0; i < 4; i++) yield return null;
+            foreach (var b in apagados) if (b != null) b.enabled = true;
+            foreach (var r in renders) if (r != null) r.enabled = true;
+            ModoFoto = false;
+            plugin.Log("  foto en " + ruta);
+        }
+
+        // ---- fotodesde: la cámara del juego se mueve SOLO al dibujar la foto (el jugador no se mueve) ----
+        static bool fdActivo; static Vector3 fdPos, fdGuardPos; static Quaternion fdRot, fdGuardRot; static float fdFov, fdGuardFov;
+        static void FdAntes(Camera c)
+        {
+            if (!fdActivo || c != Camera.main) return;
+            fdGuardPos = c.transform.position; fdGuardRot = c.transform.rotation; fdGuardFov = c.fieldOfView;
+            c.transform.position = fdPos; c.transform.rotation = fdRot; c.fieldOfView = fdFov;
+        }
+        static void FdDespues(Camera c)
+        {
+            if (!fdActivo || c != Camera.main) return;
+            c.transform.position = fdGuardPos; c.transform.rotation = fdGuardRot; c.fieldOfView = fdGuardFov;
+        }
+
+        System.Collections.IEnumerator FotoDesde(string arg)
+        {
+            var ps = arg.Split(' '); var ci = System.Globalization.CultureInfo.InvariantCulture;
+            if (ps.Length < 6) { plugin.Log("  uso: fotodesde x y z tx ty tz [fov] [luz] [nombre]"); yield break; }
+            Vector3 o = Anclaje.Origen();
+            fdPos = o + new Vector3(float.Parse(ps[0], ci), float.Parse(ps[1], ci), float.Parse(ps[2], ci));
+            Vector3 t = o + new Vector3(float.Parse(ps[3], ci), float.Parse(ps[4], ci), float.Parse(ps[5], ci));
+            fdRot = Quaternion.LookRotation(t - fdPos, Vector3.up);
+            fdFov = ps.Length > 6 ? float.Parse(ps[6], ci) : 45f;
+            float luz = ps.Length > 7 ? float.Parse(ps[7], ci) : 0f;
+            string nombre = ps.Length > 8 ? ps[8] : "fotodesde_" + DateTime.Now.ToString("HHmmss");
+            Directory.CreateDirectory(carpetaCapturas);
+            string ruta = Path.Combine(carpetaCapturas, nombre + ".png");
+            GameObject goLuz = null;
+            if (luz > 0f)
+            {
+                goLuz = new GameObject("coop_foto_luz"); goLuz.transform.position = t + (fdPos - t).normalized * 14f + Vector3.down * 6f;
+                var l = goLuz.AddComponent<Light>(); l.type = LightType.Point; l.range = 60f; l.intensity = luz; l.color = new Color(1f, 0.82f, 0.68f); l.shadows = LightShadows.None;
+            }
+            ModoFoto = true;
+            var apagados = new List<Behaviour>(); var renders = new List<Renderer>();
+            foreach (var c in UnityEngine.Object.FindObjectsOfType<Canvas>()) if (c.enabled) { c.enabled = false; apagados.Add(c); }
+            foreach (var g in UnityEngine.Object.FindObjectsOfType<GUIText>()) if (g.enabled) { g.enabled = false; apagados.Add(g); }
+            foreach (var g in UnityEngine.Object.FindObjectsOfType<GUITexture>()) if (g.enabled) { g.enabled = false; apagados.Add(g); }
+            var pw = UnityEngine.Object.FindObjectOfType<PlayerWeapons>();
+            if (pw != null) foreach (var r in pw.GetComponentsInChildren<Renderer>()) if (r.enabled) { r.enabled = false; renders.Add(r); }
+            Camera.onPreCull += FdAntes; Camera.onPostRender += FdDespues; fdActivo = true;
+            for (int i = 0; i < 3; i++) yield return null;
+            Application.CaptureScreenshot(ruta, 2);
+            for (int i = 0; i < 4; i++) yield return null;
+            fdActivo = false; Camera.onPreCull -= FdAntes; Camera.onPostRender -= FdDespues;
+            if (goLuz != null) UnityEngine.Object.Destroy(goLuz);
+            foreach (var b in apagados) if (b != null) b.enabled = true;
+            foreach (var r in renders) if (r != null) r.enabled = true;
+            ModoFoto = false;
+            plugin.Log("  foto desde " + (fdPos - o).ToString("F0") + " en " + ruta);
         }
 
         void Captura(string nombre)

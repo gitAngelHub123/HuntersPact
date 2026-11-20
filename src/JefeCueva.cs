@@ -938,6 +938,7 @@ namespace WitchHuntCoop
         static Texture2D blanco;
         void OnGUI()
         {
+            if (Depuracion.ModoFoto) return;   // fotos para publicar: sin barra de vida
             if (fase == Fase.Colgada || fase == Fase.Muerta) return;
             var j = Mio; if (j == null) return;
             if (Vector3.Distance(j.transform.position, centro) > 90f * Mundo.CuevaE) return;

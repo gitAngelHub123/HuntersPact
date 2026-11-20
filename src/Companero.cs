@@ -55,6 +55,10 @@ namespace WitchHuntCoop
         public bool Visible { get { return cuerpo != null && cuerpo.activeSelf; } }
         public Vector3 PosicionMundo { get { return posVista; } }
         public Vector3 Adelante { get { return Quaternion.Euler(0f, yawVisto, 0f) * Vector3.forward; } }
+        /// Hacia dónde mira (con la inclinación de la cámara) y su mano derecha: para ponerle el arma (ArmaCompanero, 2026-11-20).
+        public Quaternion Mirada { get { return Quaternion.Euler(pitchVisto, yawVisto, 0f); } }
+        public Transform Hueso(HumanBodyBones b) { return animator != null && animator.isHuman ? animator.GetBoneTransform(b) : null; }
+        public Transform ManoDerecha { get { return animator != null && animator.isHuman ? animator.GetBoneTransform(HumanBodyBones.RightHand) : null; } }
 
         public string Describir()
         {

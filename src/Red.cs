@@ -37,6 +37,7 @@ namespace WitchHuntCoop
         Evento = 21,  // evento del bosque: tipo (0 = terminó) y segundos que quedan
         Levantar = 20,// el compañero terminó de levantarte (mantuvo E 6 s)
         Aliado = 19,  // un aliado de la bola de cristal: hueco, vivo, tipo, posición, giro, animación
+        ArmaCompanero = 32,   // (2026-11-20) número del arma que el jugador tiene en la mano (al cambiar y cada segundo): el otro la muestra en el muñeco
         SonidoCompanero = 31, // (2026-11-20) disparo (0), recarga (1) o cambio de arma (2) del compañero + número de arma: el otro lo hace sonar
         JefeCueva = 30, // jefe de la cueva: estado del anfitrión (0: pos, giro, fase, vida) o daño del invitado (1: daño)
         MuerteInvitado = 29, // el invitado mató su copia de un monstruo del anfitrión (id): el anfitrión mata el suyo

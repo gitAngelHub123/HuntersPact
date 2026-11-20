@@ -304,7 +304,7 @@ namespace WitchHuntCoop
         }
 
         static Texture2D texBola;
-        static Texture2D TexturaBola()
+        internal static Texture2D TexturaBola()
         {
             if (texBola != null) return texBola;
             texBola = new Texture2D(128, 64, TextureFormat.RGB24, false) { hideFlags = HideFlags.HideAndDontSave, wrapMode = TextureWrapMode.Repeat };

@@ -13,7 +13,7 @@ namespace WitchHuntCoop
     {
         public const string Guid = "angel.witchhunt.coop";
         public const string Nombre = "Hunters' Pact";   // (2026-11-20) nombre público del mod (GUID y DLL se mantienen para no duplicar instalaciones)
-        public const string Version = "0.1.0";
+        public const string Version = "0.2.0";
 
         const float IntervaloEstado = 0.05f;   // 20 envíos por segundo
         const float IntervaloHola = 1f;
@@ -95,6 +95,7 @@ namespace WitchHuntCoop
         public void EnviarTesoro(byte[] datos) { red.Enviar(TipoMensaje.Tesoro, datos); }
         public void EnviarJefeCueva(byte[] datos) { red.Enviar(TipoMensaje.JefeCueva, datos); }
         public void EnviarSonidoCompanero(byte[] datos) { red.Enviar(TipoMensaje.SonidoCompanero, datos); }
+        public void EnviarArmaCompanero(byte[] datos) { red.Enviar(TipoMensaje.ArmaCompanero, datos); }
         public void EnviarAliado(byte[] datos) { red.Enviar(TipoMensaje.Aliado, datos); }
         public void EnviarAliadoDano(byte[] datos) { red.Enviar(TipoMensaje.AliadoDano, datos); }
         public void EnviarEvento(byte[] datos) { for (int i = 0; i < 2; i++) red.Enviar(TipoMensaje.Evento, datos); }
@@ -235,6 +236,7 @@ namespace WitchHuntCoop
             if (!conectado) { pingMs = -1f; ultimoPong = 0f; }
             Controles.Iniciar(this); Controles.Actualizar();
             if (conectado) FuegoAmigo.Actualizar(this);
+            if (conectado) ArmaCompanero.Actualizar(this);   // (2026-11-20) qué arma tengo en la mano
             if (conectado) SonidosCompanero.Actualizar(this);   // (2026-11-20) disparos, recarga, cambio de arma y pasos del compañero
 #if PRUEBAS
             if (Controles.Capturando == null && Controles.Pulsada("panel")) AlternarPanel();   // F8 (panel de conexión) solo en pruebas (2026-11-20)
@@ -347,6 +349,7 @@ namespace WitchHuntCoop
             if (panelAbierto) LiberarCursor();
             if (Seguir) MirarCompanero(false);
             if (companero != null) companero.AplicarMirada();
+            Rendimiento.Medir("arma compañero", () => ArmaCompanero.Colocar(this));   // después de la mirada: la mano ya está en su sitio
             if (combate != null && conectado) Rendimiento.Medir("combate(tarde)", () => combate.LateUpdate(Ancla(), Time.deltaTime));
         }
 
@@ -476,6 +479,9 @@ namespace WitchHuntCoop
                     break;
                 case TipoMensaje.JefeCueva:
                     if (conectado) mundo.RecibirJefeCueva(Red.Lector(p.Datos));
+                    break;
+                case TipoMensaje.ArmaCompanero:
+                    if (conectado) ArmaCompanero.Recibir(Red.Lector(p.Datos));
                     break;
                 case TipoMensaje.SonidoCompanero:
                     if (conectado) SonidosCompanero.Recibir(this, Red.Lector(p.Datos));
@@ -882,6 +888,7 @@ namespace WitchHuntCoop
 
         void Interfaz()
         {
+            if (Depuracion.ModoFoto) return;   // (2026-11-20) fotos para publicar: sin interfaz del mod
             // IMGUI llama a OnGUI varias veces por cuadro (Layout, Repaint y un evento por tecla/ratón). Lo que solo se dibuja (marcadores, avisos,
             // textos) se pinta una sola vez, en Repaint: en los otros pasos gastaba tiempo del hilo principal sin mostrar nada.
             bool pintar = Event.current != null && Event.current.type == EventType.Repaint;

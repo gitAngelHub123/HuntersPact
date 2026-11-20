@@ -82,6 +82,20 @@ namespace WitchHuntCoop
             return false;
         }
 
+        /// Estado para la orden 'fuegoamigo' (2026-11-20).
+        public static string Informe(Plugin plugin)
+        {
+            var c = plugin.CompaneroObj;
+            string txt = "fuego amigo " + (Opciones.FuegoAmigo ? "ACTIVO" : "apagado") + (plugin.EsAnfitrion ? " (anfitrión)" : " (invitado)");
+            if (c == null || c.Cuerpo == null) return txt + " | sin cuerpo del compañero";
+            var t = c.Cuerpo.transform.Find(NombreColision); var col = t != null ? t.GetComponent<Collider>() : null;
+            txt += " | cuerpo activo=" + c.Cuerpo.activeInHierarchy + " escala=" + c.Cuerpo.transform.lossyScale + " pos=" + c.Cuerpo.transform.position;
+            txt += col == null ? " | SIN colisionador" : " | colisionador enabled=" + col.enabled + " capa=" + t.gameObject.layer + " caja=" + col.bounds.center + " tam=" + col.bounds.size;
+            if (armaVista != null) txt += " | arma=" + armaVista.gameObject.name + " balas=" + armaVista.bulletsLeft + "/" + armaVista.bulletsPerClip + " daño=" + armaVista.damage + " alcance=" + armaVista.range;
+            else txt += " | sin arma vigilada";
+            return txt;
+        }
+
         static float ultimoAviso;
 
         /// Me llegó un disparo del compañero.

@@ -17,6 +17,8 @@ Invita a un amigo de Steam y salgan a cazar juntos en un mundo ampliado.
 - **Eventos:** Luna de sangre, tormenta, niebla, noche oscura y noche tranquila.
 - **Tres dificultades:** Normal, Difícil y Pesadilla.
 - **Sonidos del compañero:** se oyen sus disparos, recargas, cambios de arma y pasos.
+- **Armas del compañero a la vista:** ves en su mano el arma que lleva (pistola, mosquete, estoque, escopeta, ballesta o bola de cristal). Al apuntar o disparar la sube a la cara con las dos manos (la pistola con el brazo estirado), da el culatazo al disparar y lanza estocadas con el estoque.
+- **Fuego amigo opcional:** se elige al crear la partida; con él, los disparos pueden herir al compañero.
 - La partida cooperativa se guarda aparte (`savefile_coop.sav`): **no toca tu partida normal**.
 
 ## Instalación
@@ -64,7 +66,7 @@ Witch Hunt es de su desarrollador; este mod no incluye archivos del juego.
 
 ## English
 
-**Hunters' Pact** is a 2-player co-op mod for Witch Hunt (BepInEx 5). Host with **Crear sala** ("Create room") and invite a Steam friend; the friend accepts the Steam invite and joins — no IP or port forwarding needed. Enemies, loot, gold, chests, shop, events and travel are synced; the world is expanded (north zone, gothic castle and vault, maze, mines) and there is an optional two-phase cave boss. The co-op save is separate from your normal save.
+**Hunters' Pact** is a 2-player co-op mod for Witch Hunt (BepInEx 5). Host with **Crear sala** ("Create room") and invite a Steam friend; the friend accepts the Steam invite and joins — no IP or port forwarding needed. Enemies, loot, gold, chests, shop, events and travel are synced; the world is expanded (north zone, gothic castle and vault, maze, mines) and there is an optional two-phase cave boss. You see the weapon your partner is holding, and they raise it to aim and shoot; optional friendly fire. The co-op save is separate from your normal save.
 
 **Install:** download the release zip, extract it next to `Witch_Hunt.exe` (Steam → Manage → Browse local files). On Linux/Proton add the launch option `WINEDLLOVERRIDES="winhttp=n,b" %command%`. Both players need the same version. The in-game texts are in Spanish.
 
